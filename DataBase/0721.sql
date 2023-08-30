@@ -1,0 +1,283 @@
+-- 샘플 데이터 확인
+
+SELECT * FROM EMP;
+DESC EMP: -- 오라클은 외부에서 DESC 명령을 사용할 수 없도록 제한을 가함
+-- 왼쪽 목차에 Schemas의 USER을 찾아 들어가면 TABLE 정보를 볼 수 있음
+SELECT  * FROM DEPT;
+
+SELECT  * FROM SALGRADE;
+
+SELECT  * FROM 
+
+
+-- 위에서 내려온 것
+SELECT MAX(LEVEL)
+FROM EMP
+START WITH MGR IS NULL CONNECT BY PRIOR EMPNO = MGR;
+
+
+
+-- EMPNO = MGR의 쓰는 순서에 따라서 달라짐
+SELECT LEVEL, ENAME, EMPNO, MGR, CONNECT_BY_ISLEAF
+FROM EMP
+START WITH UPPER(JOB) = 'PRESIDENT'
+CONNECT BY PRIOR EMPNO = MGR;
+
+-- 출발점을 JONES로 설정
+SELECT LEVEL, ENAME, EMPNO, MGR
+FROM EMP
+START WITH ENAME = 'JONES'
+CONNECT BY PRIOR EMPNO = MGR;
+
+-- JONES부터 상관을 조회
+SELECT LEVEL, ENAME, EMPNO, MGR, CONNECT_BY_ISLEAF
+FROM EMP
+START WITH ENAME = 'JONES'
+CONNECT BY PRIOR MGR = EMPNO;
+
+-- JONES에서 시작
+-- JONES의 EMPNO를 가지고 있는 MGR 번호를 찾아
+-- -이 때 TERMINER이면 1 아님 0
+-- EMPNO = MGR 같은 EMPNO을 가지고 있는 MGR을 찾고 있는 거니까 아래 기수
+-- -MGR = EMPNO 같은 MGR을 가지고 있는 EMPNO을 찾는 거니까 윗 기수
+
+
+
+
+
+
+
+-- ROWID 조회
+SELECT ROWID, ENAME
+FROM EMP;
+
+
+-- DEPTNO 별로 ENAME과 DEPTNO를 1개씩만 조회
+SELECT ENAME, DEPTNO
+FROM EMP;
+
+-- DISTINCT는 여러개의 컬럼이 작성되면 모든 컬러의 값이 값아야 제거
+SELECT DISTINCT ENAME, DEPTNO
+FROM EMP;
+
+-- GROUP BY는 그룹화하지 않은 컬럼을 SELECT 절에 출력할 수 없음 -- 에러
+SELECT DISTINCT ENAME, DEPTNO
+FROM EMP
+GROUP BY DEPTNO;
+
+
+-- ROWID 중복 제거 예제
+-- 다른 컬럼을 사용하지 않고 그룹화 한후 ROWID가 가장 큰 데이터를 추출
+SELECT DISTINCT ENAME, DEPTNO
+FROM EMP
+WHERE ROWID IN(SELECT MAX(ROWID) FROM EMP GROUP BY DEPTNO);
+
+-- 행 번호 조회
+SELECT ROWNUM, ENAME
+FROM EMP;
+
+-- ROWNUM을 이용한 조회 조건을 만들 때는 주의가 필요
+SELECT ROWNUM, ENAME
+FROM EMP 
+WHERE ROWNUM >3; 
+
+SELECT ROWNUM, ENAME
+FROM EMP 
+WHERE ROWNUM <3; 
+
+-- 급여가 많은 순으로 조회
+SELECT *
+FROM EMP
+ORDER BY SAL DESC;
+
+-- 급여가 많은 순으로 5개 조회
+-- ORACLE 12g 버전에서부터 지원 -- 여기선 에러 남
+SELECT *
+FROM EMP
+ORDER BY SAL DESC
+OFFSET 0
+ROWS FETCH NEXT 5 ROWS ONLY;
+
+
+
+
+
+-- EMP 테이블에 사원이라는 SYNONYM을 생성
+CREATE SYNONYM 사원
+FOR EMP;
+
+SELECT *
+FROM 사원;
+
+SELECT *
+FROM EMP;
+
+
+-- SEQUENCE 생성
+DROP SEQUENCE DEPT_SEQ;
+
+-- SEQUENCE 생성
+-- 초기값은 50, 증가는 3씩
+CREATE SEQUENCE DEPT_SEQ
+	START WITH 50
+		INCREMENT BY 3;
+
+
+-- 값 확인 
+SELECT DEPT_SEQ.NEXTVAL
+FROM DUAL;
+
+-- 시퀀스를 이용한 데이터 삽입
+INSERT INTO DEPT(DEPTNO, DNAME, LOC) VALUES(DEPT_SEQ.NEXTVAL, '기획', '목동');
+
+-- 확인
+SELECT *
+FROM DEPT;
+
+
+
+
+
+
+-- *ROLLUP 예제
+-- EMP 테이블에서 JOB 별로 SAL의 평균을 조회
+SELECT JOB, AVG(SAL) 급여평균
+FROM EMP
+GROUP BY JOB;
+
+-- 실행 결과의 맨 아래 NULL 항목은 전체 평균을 나타냄
+SELECT JOB, AVG(SAL) 급여평균
+FROM EMP
+GROUP BY ROLLUP(JOB);
+
+SELECT JOB, NVL(JOB, '전체')JOB, AVG(SAL) 급여평균
+FROM EMP
+GROUP BY ROLLUP(JOB);
+
+
+
+
+-- DEPTNO 별로 SAL의 합계를 조회
+-- 숫자 컬럼은 조회할 때 DECODE로 감싸야 함 
+-- DECODE 값이 NULL이면 전체 그렇지 않으면 DEPTNO을 변환해서 조회
+SELECT DECODE(DEPTNO, NULL, '전체', DEPTNO) DEPTNO, SUM(SAL) 급여합계
+FROM EMP
+GROUP BY ROLLUP(DEPTNO);
+
+
+-- 부서별 합계와 전체 합계 조회
+SELECT DEPTNO, JOB, SUM(SAL) 급여합계
+FROM EMP
+GROUP BY ROLLUP(DEPTNO, JOB)
+ORDER BY DEPTNO;
+
+
+-- 전체 합계는 제외
+SELECT DEPTNO, NVL(JOB, '합계'), SUM(SAL) 급여합계
+FROM EMP
+GROUP BY DEPTNO, ROLLUP(JOB)
+ORDER BY DEPTNO;
+
+
+-- ROLLUP과 CUBE 비교해서 살펴보기
+
+-- CUBE는 모든 중간 집계를 조회
+SELECT DEPTNO, JOB, SUM(SAL) 급여합계
+FROM EMP
+GROUP BY CUBE(DEPTNO, JOB)
+ORDER BY DEPTNO;
+
+
+
+
+
+
+-- GROUPING : 중간 집계이면 1 그렇지 않으면 0을 리턴
+SELECT  DEPTNO, GROUPING(DEPTNO), JOB, GROUPING(JOB), SUM(SAL) 급여합계
+FROM EMP 
+GROUP BY ROLLUP(DEPTNO, JOB)
+ORDER BY DEPTNO ;
+
+
+-- 주로 타이틀을 만들 때 사용
+SELECT  DEPTNO, DECODE(GROUPING(DEPTNO), 1, '전체합계') AS ALLTOT,
+	JOB, DECODE(GROUPING(JOB), 1, '부서 합계') AS DEPTTOT, SUM(SAL) 급여합계
+FROM EMP 
+GROUP BY ROLLUP(DEPTNO, JOB)
+ORDER BY DEPTNO ;
+
+
+
+
+
+-- GROUPING SETS은 개별 그룹화를 수행
+SELECT  DEPTNO, JOB, SUM(SAL) 급여합계
+FROM EMP 
+GROUP BY ROLLUP(DEPTNO, JOB);
+
+-- ROLLUP(위)과 GROUPING SET(아래) 과의 실행 결과 비교
+SELECT  DEPTNO, JOB, SUM(SAL) 급여합계
+FROM EMP 
+GROUP BY GROUPING SETS(DEPTNO, JOB);
+
+
+
+-- EMP 테이블에서 전체 SAL에서 자신의 SAL의 비율
+-- Cardinality의 값이 달라서 실행 불가  (SAL과 SUM(SAL)의 행의 개수가 달라서 에러)
+SELECT ENAME, SAL, SAL/SUM(SAL) 
+FROM EMP;
+
+
+-- SUM(SAL)을 전부 복사해서  14개의 행으로 만들어서 조회
+-- 컬럼 이름에 별명을 부여하고자 하는 경우에는 컬럼 이름이나 연산식 다음에 AS 별명
+-- AS는 생략이 가능
+-- 별명에 영문 대문자나 공백이 있으면 ""으로 감싸야 함
+-- - EX) 급여 비율이면 "" 필요 O,  급여비율이면 필요 X
+-- sum 뒤에 over 함수가 sal의 개수만큼 sum을 만들어줌
+SELECT ENAME, SAL, SAL*100 /SUM(SAL) OVER() AS "급여비율" 
+FROM EMP;
+
+
+-- EMP 테이블에서 EMPNO, ENAME, SAL, 현재행까지의 SAL 합계를 조회
+-- 누적합 아니면 ROWS 행 빼면 됨
+SELECT EMPNO, ENAME, SAL, SUM(SAL) OVER(ORDER BY SAL EMPNO 
+	ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW) " 현재 행까지의 급여 합계"
+FROM EMP;
+
+
+
+-- EMP 테이블에서 EMPNO, ENAME, SAL, 현재행부터 마지막 행까지의 SAL 합계를 조회
+SELECT EMPNO, ENAME, SAL, SUM(SAL) OVER(ORDER BY SAL
+	ROWS BETWEEN CURRENT ROW AND UNBOUNDED FOLLOWING) "급여 합계"
+FROM EMP;
+
+
+-- 처음 행부터 마지막 행까지
+SELECT EMPNO, ENAME, SAL, SUM(SAL) OVER(ORDER BY SAL
+	ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING) "급여 합계"
+FROM EMP;
+
+
+
+-- PAETITION BY 예제
+-- OVER 안에 `PARTITIOND BY 컬럼이름` 을 기재하면 그룹화해서 집계를 수행
+-- 부서별 급여 평균
+SELECT EMPNO, ENAME, SAL, AVG(SAL) OVER(PARTITION BY DEPTNO) " 부서별 평균 급여"
+FROM EMP;
+
+
+
+
+-- 부서별 급여 순위
+-- "" 큰 따옴표로 해야됨
+SELECT ENAME, SAL, DEPTNO,
+	RANK() OVER(PARTITION BY DEPTNO ORDER BY SAL DESC) "급여순위",
+	DENSE_RANK() OVER(PARTITION BY DEPTNO ORDER BY SAL DESC) "급여순위",
+	ROW_NUMBER() OVER(PARTITION BY DEPTNO ORDER BY SAL DESC) "급여순위"
+FROM EMP;
+
+
+-- PIVOT
+SELECT * FROM EMP
+PIVOT(MAX(SAL) FOR DEPTNO IN (10,20, 30));
+

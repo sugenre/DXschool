@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+</head>
+<body>
+    {% for item in data %}
+        <div>{{item.itemid}} - <a href="detail/{{item.itemid}}"> {{item.itemname}} - {{item.price}}</div>
+    {% endfor %}
+</body>
+</html>
